@@ -16,66 +16,66 @@ const pool = mysql.createPool({
 
 // ⬇️ DATABASE SETUP WITH SAMPLE DATA
 async function setupDB() {
-  try {
-    const db = await pool.getConnection();
-
-    // Insert Users
-    const [users] = await db.execute('SELECT COUNT(*) AS count FROM Users');
-    if (users[0].count === 0) {
-      await db.execute(`
-        INSERT INTO Users (username, email, role) VALUES
-          ('alice123', 'alice@example.com', 'owner'),
-          ('bobwalker', 'bob@example.com', 'walker'),
-          ('carol123', 'carol@example.com', 'owner'),
-          ('davidwalker', 'david@example.com', 'walker'),
-          ('emilyo', 'emily@example.com', 'owner')
-      `);
-      console.log('✅ Inserted users');
-    }
-
-    // Insert Dogs
-    const [dogs] = await db.execute('SELECT COUNT(*) AS count FROM Dogs');
-    if (dogs[0].count === 0) {
-      await db.execute(`
-        INSERT INTO Dogs (name, size, owner_id) VALUES
-          ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
-          ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emilyo')),
-          ('Milo', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
-          ('Luna', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123')),
-          ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123'))
-      `);
-      console.log('🐶 Inserted dogs');
-    }
-
-    // Insert Walk Requests
-    const [walks] = await db.execute('SELECT COUNT(*) AS count FROM WalkRequests');
-    if (walks[0].count === 0) {
-      const walkData = [
-        ['Max', '2025-06-10 08:00:00', 30, 'Parklands', 'open'],
-        ['Bella', '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'],
-        ['Rocky', '2025-06-11 10:00:00', 60, 'Central Park', 'open'],
-        ['Milo', '2025-06-12 07:30:00', 20, 'Riverside Trail', 'open'],
-        ['Luna', '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed']
-      ];
-
-      for (const [dogName, dateTime, duration, location, status] of walkData) {
+    try {
+      // Insert users if empty
+      const [users] = await db.execute('SELECT COUNT(*) AS count FROM Users');
+      if (users[0].count === 0) {
         await db.execute(`
-          INSERT INTO WalkRequests (dog_id, date_time, duration_minutes, location, status)
-          VALUES (
-            (SELECT dog_id FROM Dogs WHERE name = ?),
-            ?, ?, ?, ?
-          )
-        `, [dogName, dateTime, duration, location, status]);
+          INSERT INTO Users (username, email, role)
+          VALUES
+            ('alice123', 'alice@example.com', 'owner'),
+            ('bobwalker', 'bob@example.com', 'walker'),
+            ('carol123', 'carol@example.com', 'owner'),
+            ('davidwalker', 'david@example.com', 'walker'),
+            ('emilyo', 'emily@example.com', 'owner')
+        `);
+        console.log('✅ Inserted users');
       }
 
-      console.log('🚶 Inserted walk requests');
-    }
+      // Insert dogs if empty
+      const [dogs] = await db.execute('SELECT COUNT(*) AS count FROM Dogs');
+      if (dogs[0].count === 0) {
+        await db.execute(`
+          INSERT INTO Dogs (name, size, owner_id)
+          VALUES
+            ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
+            ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emilyo')),
+            ('Milo', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
+            ('Luna', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123')),
+            ('Max', 'large', (SELECT user_id FROM Users WHERE username = 'alice123'))
+        `);
+        console.log('🐶 Inserted dogs');
+      }
 
-    db.release();
-  } catch (err) {
-    console.error('❌ Error setting up database:', err);
+      // Insert walk requests if empty
+      const [walks] = await db.execute('SELECT COUNT(*) AS count FROM WalkRequests');
+      if (walks[0].count === 0) {
+        const walkData = [
+          ['Max', '2025-06-10 08:00:00', 30, 'Parklands', 'open'],
+          ['Bella', '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'],
+          ['Rocky', '2025-06-11 10:00:00', 60, 'Central Park', 'open'],
+          ['Milo', '2025-06-12 07:30:00', 20, 'Riverside Trail', 'open'],
+          ['Luna', '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed']
+        ];
+
+        for (const [dogName, datetime, duration, location, status] of walkData) {
+          await db.execute(`
+            INSERT INTO WalkRequests (dog_id, datetime, duration_minutes, location, status)
+            VALUES (
+              (SELECT dog_id FROM Dogs WHERE name = ?),
+              ?, ?, ?, ?
+            )
+          `, [dogName, datetime, duration, location, status]);
+        }
+
+        console.log('🚶 Inserted walk requests');
+      }
+
+    } catch (err) {
+      console.error('❌ Error setting up database:', err);
+    }
   }
-}
+
 
 setupDB();
 
