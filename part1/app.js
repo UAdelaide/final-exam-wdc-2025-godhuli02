@@ -57,15 +57,17 @@ async function setupDB() {
         ['Luna', '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed']
       ];
 
-      for (const [dogName, datetime, duration, location, status] of walkData) {
-        await db.execute(`
-          INSERT INTO WalkRequests (dog_id, date_time, duration_minutes, location, status)
-          VALUES (
-            (SELECT dog_id FROM Dogs WHERE name = ?),
-            ?, ?, ?, ?
-          )
-        `, [dogName, datetime, duration, location, status]);
+      for (const [dogName, date_time, duration, location, status] of walkData) {
+        await db.execute(
+          `INSERT INTO WalkRequests (dog_id, date_time, duration_minutes, location, status)
+           VALUES (
+             (SELECT dog_id FROM Dogs WHERE name = ?),
+             ?, ?, ?, ?
+           )`,
+          [dogName, date_time, duration, location, status]
+        );
       }
+
 
       console.log('✅ Seeded WalkRequests');
     }
