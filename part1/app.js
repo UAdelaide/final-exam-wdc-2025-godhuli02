@@ -7,22 +7,67 @@ app.use(express.json());
 
 let db;
 
-// Connect to DogWalkService database
 async function setupDB() {
   try {
     db = await mysql.createConnection({
       host: 'localhost',
       user: 'root',
-      password: '', // use your MySQL root password here
+      password: '', // update if needed
       database: 'DogWalkService'
     });
-    console.log('✅ Connected to DogWalkService database!');
+
+    console.log('✅ Connected to DogWalkService database');
+
+    // Insert users if empty
+    const [users] = await db.execute('SELECT COUNT(*) AS count FROM Users');
+    if (users[0].count === 0) {
+      await db.execute(`
+        INSERT INTO Users (username, email, password, role) VALUES
+        ('alice123', 'alice@example.com', 'hashed123', 'owner'),
+        ('bobwalker', 'bob@example.com', 'hashed456', 'walker'),
+        ('carol123', 'carol@example.com', 'hashed789', 'owner'),
+        ('davidwalker', 'david@example.com', 'hashed111', 'walker'),
+        ('emilyO', 'emily@example.com', 'hashed999', 'owner')
+      `);
+      console.log('✅ Inserted users');
+    }
+
+    // Insert dogs if empty
+    const [dogs] = await db.execute('SELECT COUNT(*) AS count FROM Dogs');
+    if (dogs[0].count === 0) {
+      await db.execute(`
+        INSERT INTO Dogs (name, size, owner_id) VALUES
+        ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
+        ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
+        ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emilyO')),
+        ('Milo', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
+        ('Luna', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
+      `);
+      console.log('✅ Inserted dogs');
+    }
+
+    // Insert walk requests if empty
+    const [walks] = await db.execute('SELECT COUNT(*) AS count FROM WalkRequests');
+    if (walks[0].count === 0) {
+      await db.execute(`
+        INSERT INTO WalkRequests (dog_id, date_time, duration_minutes, location, status) VALUES
+        ((SELECT dog_id FROM Dogs WHERE name = 'Max'), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Bella'), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Rocky'), '2025-06-11 10:00:00', 60, 'Central Park', 'open'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Milo'), '2025-06-12 07:30:00', 20, 'Riverside Trail', 'open'),
+        ((SELECT dog_id FROM Dogs WHERE name = 'Luna'), '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed')
+      `);
+      console.log('✅ Inserted walk requests');
+    }
+
   } catch (err) {
-    console.error('❌ Database connection failed:', err);
+    console.error('❌ Error setting up database:', err);
   }
 }
 
-// Route 1: /api/dogs
+// API ROUTES
+
+// GET /api/dogs
 app.get('/api/dogs', async (req, res) => {
   try {
     const [rows] = await db.execute(`
@@ -37,7 +82,7 @@ app.get('/api/dogs', async (req, res) => {
   }
 });
 
-// Route 2: /api/walkrequests/open
+// GET /api/walkrequests/open
 app.get('/api/walkrequests/open', async (req, res) => {
   try {
     const [rows] = await db.execute(`
@@ -60,7 +105,7 @@ app.get('/api/walkrequests/open', async (req, res) => {
   }
 });
 
-// Route 3: /api/walkers/summary
+// GET /api/walkers/summary
 app.get('/api/walkers/summary', async (req, res) => {
   try {
     const [rows] = await db.execute(`
@@ -71,7 +116,7 @@ app.get('/api/walkers/summary', async (req, res) => {
         COUNT(DISTINCT r.request_id) AS completed_walks
       FROM Users u
       LEFT JOIN WalkRatings wr ON wr.walker_id = u.user_id
-      LEFT JOIN WalkRequests r ON wr.request_id = r.request_id AND r.status = 'completed'
+      LEFT JOIN WalkRequests r ON r.request_id = wr.request_id AND r.status = 'completed'
       WHERE u.role = 'walker'
       GROUP BY u.user_id
     `);
@@ -82,7 +127,7 @@ app.get('/api/walkers/summary', async (req, res) => {
   }
 });
 
-// Start server
+// Start the server
 app.listen(PORT, async () => {
   await setupDB();
   console.log(`🚀 Server running at http://localhost:${PORT}`);
