@@ -1,77 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Dog Walking Service</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-</head>
-<body class="bg-light">
-  <div id="app" class="container py-5">
-    <h1 class="mb-4 text-primary">{{ message }}</h1>
-    <p class="lead">Connect with trusted walkers for your beloved dog!</p>
+const express = require('express');
+const mysql = require('mysql2/promise');
+const cors = require('cors');
+const path = require('path');
 
-    <div class="mb-4">
-      <a href="owner-dashboard.html" class="btn btn-outline-primary me-2">Owner Dashboard</a>
-      <a href="walker-dashboard.html" class="btn btn-outline-success">Walker Dashboard</a>
-    </div>
+const app = express();
+const PORT = 8080;
 
-    <hr class="my-5">
-    <h2 class="text-secondary">All Registered Dogs</h2>
-    <table class="table table-bordered mt-3">
-      <thead class="table-light">
-        <tr>
-          <th>Photo</th>
-          <th>Name</th>
-          <th>Size</th>
-          <th>Owner</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="dog in dogs" :key="dog.name">
-          <td><img :src="dog.image" alt="Dog Photo" width="100" height="100" class="rounded"></td>
-          <td>{{ dog.name }}</td>
-          <td>{{ dog.size }}</td>
-          <td>{{ dog.owner }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-  <script>
-    const { createApp } = Vue;
-    createApp({
-      data() {
-        return {
-          message: 'Welcome to the Dog Walking Service!',
-          dogs: []
-        };
-      },
-      async mounted() {
-        try {
-          const res = await fetch('http://localhost:8080/api/dogs');
-          const data = await res.json();
+// Database connection pool
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'DogWalkService',
+});
 
-          const dogsWithPhotos = await Promise.all(data.map(async (dog) => {
-            const imgRes = await fetch('https://dog.ceo/api/breeds/image/random');
-            const imgData = await imgRes.json();
-            return {
-              name: dog.name,
-              size: dog.size,
-              owner: dog.owner_username || 'Unknown',
-              image: imgData.message
-            };
-          }));
+// Route: API to get all dogs with owner info
+app.get('/api/dogs', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT d.name AS dog_name, d.size, u.username AS owner
+      FROM Dogs d
+      JOIN Users u ON d.owner_id = u.user_id
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('❌ Error fetching dogs:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
 
-          this.dogs = dogsWithPhotos;
-        } catch (err) {
-          console.error('Error fetching dogs:', err);
-        }
-      }
-    }).mount('#app');
-  </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});
