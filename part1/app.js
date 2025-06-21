@@ -58,13 +58,14 @@ async function setupDB() {
       ];
 
       for (const [dogName, date_time, duration, location, status] of walkData) {
+        // eslint-disable-next-line no-await-in-loop
         await db.execute(
           ` INTO WalkRequests (dog_id, datetime, duration_minutes, location, status)
 
            VALUES (
              (SELECT dog_id FROM Dogs WHERE name = ?),
              ?, ?, ?, ?
-           ),
+           )`,
           [dogName, date_time, duration, location, status]
         );
       }
