@@ -58,7 +58,7 @@ async function setupDB() {
         ['Luna', '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed']
       ];
 
-      for (const [dogName, date_time, duration, location, status] of walkData) {
+      for (const [dogName, dateTime, duration, location, status] of walkData) {
         await db.execute(`
           INSERT INTO WalkRequests (dog_id, date_time, duration_minutes, location, status)
           VALUES (
