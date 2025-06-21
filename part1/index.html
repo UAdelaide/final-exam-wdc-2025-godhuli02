@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dog Walking Service - Dog of the Day</title>
+  <script src="https://unpkg.com/vue@3"></script>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      background: linear-gradient(to bottom, yellow, pink, lime);
+      color: red;
+      text-align: center;
+    }
+    button {
+      font-size: 24px;
+      background-color: cyan;
+      margin: 10px;
+      padding: 20px;
+      cursor: grab;
+    }
+    #dog-section {
+      border: 10px dashed magenta;
+      padding: 50px;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>🌈 Woof Woof! Welcome To Our Dog Service 😎</h1>
+
+    <div id="dog-section">
+      <h2>DOG OF THE DAY 🐕</h2>
+      <img :src="dogImage" width="400">
+      <p>Name: Sir Woofs-a-Lot 🐶</p>
+      <p>Breed: Who knows? 🤷‍♀️</p>
+    </div>
+
+    <button @click="loadDog">Click here to reveal another doggo → Maybe 🐾</button>
+    <button @click="loadDog">Again?</button>
+    <button @click="loadDog">Surprise Me!</button>
+    <button @click="loadDog">I’m bored, show me dog</button>
+
+    <form>
+      <label>Do you like this dog?</label><br>
+      <input type="checkbox"> Yes
+      <input type="checkbox"> No
+      <input type="checkbox"> Maybe<br><br>
+
+      <textarea placeholder="Tell us what this dog is thinking..." rows="10" cols="50"></textarea>
+    </form>
+
+    <p style="color: lightgray;">Disclaimer: We are not responsible if the dog you see today is too cute.</p>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          dogImage: ''
+        }
+      },
+      methods: {
+        async loadDog() {
+          const res = await fetch('https://dog.ceo/api/breeds/image/random');
+          const data = await res.json();
+          this.dogImage = data.message;
+        }
+      },
+      mounted() {
+        this.loadDog();
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
