@@ -59,12 +59,12 @@ async function setupDB() {
 
       for (const [dogName, date_time, duration, location, status] of walkData) {
         await db.execute(
-          `INSERT INTO WalkRequests (dog_id, datetime, duration_minutes, location, status)
+          ` INTO WalkRequests (dog_id, datetime, duration_minutes, location, status)
 
            VALUES (
              (SELECT dog_id FROM Dogs WHERE name = ?),
              ?, ?, ?, ?
-           )`,
+           ),
           [dogName, date_time, duration, location, status]
         );
       }
