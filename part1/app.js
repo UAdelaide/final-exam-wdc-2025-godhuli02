@@ -5,137 +5,129 @@ const PORT = 8080;
 
 app.use(express.json());
 
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  database: 'DogWalkService',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+let db;
 
-// ⬇️ DATABASE SETUP WITH SAMPLE DATA
 async function setupDB() {
-    try {
-      // Insert users if empty
-      const [users] = await db.execute('SELECT COUNT(*) AS count FROM Users');
-      if (users[0].count === 0) {
-        await db.execute(`
-          INSERT INTO Users (username, email, role)
-          VALUES
-            ('alice123', 'alice@example.com', 'owner'),
-            ('bobwalker', 'bob@example.com', 'walker'),
-            ('carol123', 'carol@example.com', 'owner'),
-            ('davidwalker', 'david@example.com', 'walker'),
-            ('emilyo', 'emily@example.com', 'owner')
-        `);
-        console.log('✅ Inserted users');
-      }
+  try {
+    db = await mysql.createConnection({
+      host: 'localhost',
+      user: 'root',
+      password: '',
+      database: 'DogWalkService'
+    });
 
-      // Insert dogs if empty
-      const [dogs] = await db.execute('SELECT COUNT(*) AS count FROM Dogs');
-      if (dogs[0].count === 0) {
-        await db.execute(`
-          INSERT INTO Dogs (name, size, owner_id)
-          VALUES
-            ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
-            ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emilyo')),
-            ('Milo', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
-            ('Luna', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123')),
-            ('Max', 'large', (SELECT user_id FROM Users WHERE username = 'alice123'))
-        `);
-        console.log('🐶 Inserted dogs');
-      }
+    console.log('✅ Connected to DogWalkService');
 
-      // Insert walk requests if empty
-      const [walks] = await db.execute('SELECT COUNT(*) AS count FROM WalkRequests');
-      if (walks[0].count === 0) {
-        const walkData = [
-          ['Max', '2025-06-10 08:00:00', 30, 'Parklands', 'open'],
-          ['Bella', '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'],
-          ['Rocky', '2025-06-11 10:00:00', 60, 'Central Park', 'open'],
-          ['Milo', '2025-06-12 07:30:00', 20, 'Riverside Trail', 'open'],
-          ['Luna', '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed']
-        ];
-
-        for (const [dogName, datetime, duration, location, status] of walkData) {
-          await db.execute(`
-            INSERT INTO WalkRequests (dog_id, datetime, duration_minutes, location, status)
-            VALUES (
-              (SELECT dog_id FROM Dogs WHERE name = ?),
-              ?, ?, ?, ?
-            )
-          `, [dogName, datetime, duration, location, status]);
-        }
-
-        console.log('🚶 Inserted walk requests');
-      }
-
-    } catch (err) {
-      console.error('❌ Error setting up database:', err);
+    // Seed Users
+    const [userCount] = await db.execute('SELECT COUNT(*) AS count FROM Users');
+    if (userCount[0].count === 0) {
+      await db.execute(`
+        INSERT INTO Users (username, email, role) VALUES
+          ('alice123', 'alice@example.com', 'owner'),
+          ('bobwalker', 'bob@example.com', 'walker'),
+          ('carol123', 'carol@example.com', 'owner'),
+          ('davidwalker', 'david@example.com', 'walker'),
+          ('emilyo', 'emily@example.com', 'owner')
+      `);
+      console.log('✅ Seeded Users');
     }
+
+    // Seed Dogs
+    const [dogCount] = await db.execute('SELECT COUNT(*) AS count FROM Dogs');
+    if (dogCount[0].count === 0) {
+      await db.execute(`
+        INSERT INTO Dogs (name, size, owner_id) VALUES
+          ('Max', 'medium', (SELECT user_id FROM Users WHERE username = 'alice123')),
+          ('Bella', 'small', (SELECT user_id FROM Users WHERE username = 'carol123')),
+          ('Rocky', 'large', (SELECT user_id FROM Users WHERE username = 'emilyo')),
+          ('Milo', 'small', (SELECT user_id FROM Users WHERE username = 'alice123')),
+          ('Luna', 'medium', (SELECT user_id FROM Users WHERE username = 'carol123'))
+      `);
+      console.log('✅ Seeded Dogs');
+    }
+
+    // Seed WalkRequests
+    const [walkCount] = await db.execute('SELECT COUNT(*) AS count FROM WalkRequests');
+    if (walkCount[0].count === 0) {
+      const walkData = [
+        ['Max', '2025-06-10 08:00:00', 30, 'Parklands', 'open'],
+        ['Bella', '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'],
+        ['Rocky', '2025-06-11 10:00:00', 60, 'Central Park', 'open'],
+        ['Milo', '2025-06-12 07:30:00', 20, 'Riverside Trail', 'open'],
+        ['Luna', '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed']
+      ];
+
+      for (const [dogName, datetime, duration, location, status] of walkData) {
+        await db.execute(`
+          INSERT INTO WalkRequests (dog_id, datetime, duration_minutes, location, status)
+          VALUES (
+            (SELECT dog_id FROM Dogs WHERE name = ?),
+            ?, ?, ?, ?
+          )
+        `, [dogName, datetime, duration, location, status]);
+      }
+
+      console.log('✅ Seeded WalkRequests');
+    }
+
+  } catch (err) {
+    console.error('❌ Error during DB setup:', err);
   }
+}
 
+// ROUTES
 
-setupDB();
-
-// ⬇️ ROUTES
-
+// Root
 app.get('/', (req, res) => {
-  res.send('DogWalkService is running!');
+  res.send('🐾 Dog Walking Service API is live!');
 });
 
-// Get all dogs
+// /api/dogs
 app.get('/api/dogs', async (req, res) => {
   try {
-    const [rows] = await pool.execute(`
+    const [dogs] = await db.execute(`
       SELECT d.name, d.size, u.username AS owner
       FROM Dogs d
       JOIN Users u ON d.owner_id = u.user_id
     `);
-    res.json(rows);
+    res.json(dogs);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch dogs' });
   }
 });
 
-// Get open walk requests
+// /api/walkrequests/open
 app.get('/api/walkrequests/open', async (req, res) => {
   try {
-    const [rows] = await pool.execute(`
-      SELECT
-        d.name AS dog_name,
-        wr.date_time AS requested_time,
-        wr.duration_minutes,
-        wr.location,
-        u.username AS owner_username
+    const [walks] = await db.execute(`
+      SELECT d.name AS dog_name, wr.datetime, wr.duration_minutes, wr.location, u.username AS owner
       FROM WalkRequests wr
       JOIN Dogs d ON wr.dog_id = d.dog_id
       JOIN Users u ON d.owner_id = u.user_id
       WHERE wr.status = 'open'
     `);
-    res.json(rows);
+    res.json(walks);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch open walk requests' });
+    res.status(500).json({ error: 'Failed to fetch walk requests' });
   }
 });
 
-// Walker summary endpoint
+// /api/walkers/summary
 app.get('/api/walkers/summary', async (req, res) => {
   try {
-    const [rows] = await pool.execute(`
+    const [rows] = await db.execute(`
       SELECT
         u.username AS walker,
-        COUNT(wr.request_id) AS total_walks,
-        IFNULL(AVG(r.rating), 0) AS avg_rating
+        COUNT(r.rating_id) AS total_ratings,
+        ROUND(AVG(r.rating), 1) AS average_rating,
+        COUNT(DISTINCT wr.request_id) AS completed_walks
       FROM Users u
-      LEFT JOIN WalkApplications wa ON u.user_id = wa.walker_id
-      LEFT JOIN WalkRequests wr ON wa.request_id = wr.request_id AND wr.status = 'completed'
-      LEFT JOIN WalkRatings r ON wr.request_id = r.request_id
+      LEFT JOIN WalkRatings r ON u.user_id = r.walker_id
+      LEFT JOIN WalkRequests wr ON wr.request_id = r.request_id AND wr.status = 'completed'
       WHERE u.role = 'walker'
-      GROUP BY u.username
+      GROUP BY u.user_id
     `);
     res.json(rows);
   } catch (err) {
@@ -144,7 +136,8 @@ app.get('/api/walkers/summary', async (req, res) => {
   }
 });
 
-// ⬇️ Start server
-app.listen(PORT, () => {
+// Server start
+app.listen(PORT, async () => {
+  await setupDB();
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
