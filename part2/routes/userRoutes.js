@@ -34,6 +34,15 @@ router.get('/me', (req, res) => {
   }
   res.json(req.session.user);
 });
+router.get('/dogs', async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT * FROM Dogs');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dogs' });
+  }
+});
+
 
 // POST login (dummy version)
 router.post('/login', async (req, res) => {
