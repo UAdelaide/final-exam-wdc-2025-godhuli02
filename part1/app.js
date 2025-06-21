@@ -12,7 +12,7 @@ async function setupDB() {
     db = await mysql.createConnection({
       host: 'localhost',
       user: 'root',
-      password: '', // update if needed
+      password: '', 
       database: 'DogWalkService'
     });
 
