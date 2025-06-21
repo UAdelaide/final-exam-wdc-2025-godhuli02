@@ -46,23 +46,28 @@ async function setupDB() {
       console.log('✅ Inserted dogs');
     }
 
-    // Insert walk requests if empty
-    const [walks] = await db.execute('SELECT COUNT(*) AS count FROM WalkRequests');
-    if (walks[0].count === 0) {
-      await db.execute(`
-        INSERT INTO WalkRequests (dog_id, date_time, duration_minutes, location, status)
-        ((SELECT dog_id FROM Dogs WHERE name = 'Max'), '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Bella'), '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Rocky'), '2025-06-11 10:00:00', 60, 'Central Park', 'open'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Milo'), '2025-06-12 07:30:00', 20, 'Riverside Trail', 'open'),
-        ((SELECT dog_id FROM Dogs WHERE name = 'Luna'), '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed')
-      `);
-      console.log('✅ Inserted walk requests');
-    }
+// Insert walk requests if empty
+const [walks] = await db.execute('SELECT COUNT(*) AS count FROM WalkRequests');
+if (walks[0].count === 0) {
+  const walkData = [
+    ['Max', '2025-06-10 08:00:00', 30, 'Parklands', 'open'],
+    ['Bella', '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'],
+    ['Rocky', '2025-06-11 10:00:00', 60, 'Central Park', 'open'],
+    ['Milo', '2025-06-12 07:30:00', 20, 'Riverside Trail', 'open'],
+    ['Luna', '2025-06-13 17:00:00', 40, 'Eastwood Reserve', 'completed']
+  ];
 
-  } catch (err) {
-    console.error('❌ Error setting up database:', err);
+  for (const [dogName, dateTime, duration, location, status] of walkData) {
+    await db.execute(`
+      INSERT INTO WalkRequests (dog_id, date_time, duration_minutes, location, status)
+      VALUES (
+        (SELECT dog_id FROM Dogs WHERE name = ?),
+        ?, ?, ?, ?
+      )
+    `, [dogName, dateTime, duration, location, status]);
   }
+
+  console.log('✅ Inserted walk requests');
 }
 
 // API ROUTES
