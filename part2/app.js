@@ -1,39 +1,35 @@
 const express = require('express');
-const mysql = require('mysql2/promise');
 const cors = require('cors');
-const path = require('path');
-
+const mysql = require('mysql2/promise');
 const app = express();
 const PORT = 8080;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Database connection pool
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'DogWalkService',
-});
+// Connect DB
+let db;
+async function connectDB() {
+  db = await mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'DogWalkService'
+  });
+  console.log('✅ Connected to DogWalkService');
+}
+connectDB();
 
-// Route: API to get all dogs with owner info
+// Endpoint to return all dogs
 app.get('/api/dogs', async (req, res) => {
   try {
-    const [rows] = await pool.execute(`
-      SELECT d.name AS dog_name, d.size, u.username AS owner
-      FROM Dogs d
-      JOIN Users u ON d.owner_id = u.user_id
-    `);
+    const [rows] = await db.execute('SELECT * FROM Dogs');
     res.json(rows);
   } catch (err) {
-    console.error('❌ Error fetching dogs:', err);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Failed to fetch dogs' });
   }
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
