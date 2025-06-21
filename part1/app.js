@@ -21,14 +21,14 @@ async function setupDB() {
     // Seed Users
     const [userCount] = await db.execute('SELECT COUNT(*) AS count FROM Users');
     if (userCount[0].count === 0) {
-      await db.execute(`
-        INSERT INTO Users (username, email, role) VALUES
-          ('alice123', 'alice@example.com', 'owner'),
-          ('bobwalker', 'bob@example.com', 'walker'),
-          ('carol123', 'carol@example.com', 'owner'),
-          ('davidwalker', 'david@example.com', 'walker'),
-          ('emilyo', 'emily@example.com', 'owner')
-      `);
+        await db.execute(`
+            INSERT INTO Users (username, email, password_hash, role) VALUES
+            ('alice123', 'alice@example.com', 'hashed123', 'owner'),
+            ('bobwalker', 'bob@example.com', 'hashed456', 'walker'),
+            ('carol123', 'carol@example.com', 'hashed789', 'owner'),
+            ('davidwalker', 'david@example.com', 'hashed111', 'walker'),
+            ('emilyo', 'emily@example.com', 'hashed999', 'owner')
+          `);
       console.log('✅ Seeded Users');
     }
 
